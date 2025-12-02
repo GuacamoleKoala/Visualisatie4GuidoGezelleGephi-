@@ -468,59 +468,79 @@ function nodeNormal() {
 }
 
 function nodeActive(a) {
-    var groupByDirection = false;
-    if (config.informationPanel.groupByEdgeDirection && config.informationPanel.groupByEdgeDirection == true) groupByDirection = true;
-
+    
+    // Herstel basisfunctionaliteit
     sigInst.neighbors = {};
     sigInst.detail = !0;
     var b = sigInst._core.graph.nodesIndex[a];
     showGroups(!1);
-    var outgoing = {}, incoming = {}, mutual = {};
+    
+    // --- CATEGORISATIE VAN VERBINDINGEN ---
+    // Objecten om de buren per categorie te bewaren, inclusief de nieuwe "Ligt in Land"
+    var relatieGeboorte = {};
+    var relatieSterfte = {};
+    var relatieWerk = {};
+    var relatieWoon = {};
+    var relatieLand = {}; // NIEUW: Voor "ligt in land" verbindingen
+    
+    // 1. Itereer over alle randen om de buren te categoriseren en het netwerk te markeren
+    sigInst.iterEdges(function (c) {
+        c.attr.lineWidth = !1;
+        c.hidden = !0;
+        
+        var neighborID = (a == c.target) ? c.source : c.target;
+        
+        // Haal het relatietype op uit de attributen van de rand
+        var relatieType = c.attr.attributes && c.attr.attributes.relationshiptype; 
+        var relatieTypeLower = relatieType ? relatieType.toLowerCase() : '';
 
-    sigInst.iterEdges(function (b) {
-        b.attr.lineWidth = !1;
-        b.hidden = !0;
-
-        n = {
-            name: b.label,
-            colour: b.color
+        // Data die nodig is voor createList (edge label en edge kleur)
+        var n = {
+            name: c.label,
+            colour: c.color
         };
+        
+        if (a == c.source || a == c.target) {
+            // Maak de rand zichtbaar
+            c.hidden = !1, c.attr.color = "rgba(0, 0, 0, 1)";
 
-        if (a == b.source) outgoing[b.target] = n;
-        else if (a == b.target) incoming[b.source] = n;
-        if (a == b.source || a == b.target) sigInst.neighbors[a == b.target ? b.source : b.target] = n;
-        b.hidden = !1, b.attr.color = "rgba(0, 0, 0, 1)";
+            // Categorie bepalen en de buur toevoegen. Let op de controle op zowel NL als EN.
+            if (relatieTypeLower == "geboorteplaats" || relatieTypeLower == "place of birth") {
+                relatieGeboorte[neighborID] = n;
+            } else if (relatieTypeLower == "sterfteplaats" || relatieTypeLower == "place of death") {
+                relatieSterfte[neighborID] = n;
+            } else if (relatieTypeLower == "werklocatie" || relatieTypeLower == "place of employment") {
+                relatieWerk[neighborID] = n;
+            } else if (relatieTypeLower == "woonplaats" || relatieTypeLower == "place of living") {
+                relatieWoon[neighborID] = n;
+            } else if (relatieTypeLower == "stad ligt in land" || relatieTypeLower == "located in country") {
+                // De "Stad ligt in land" relatie scheiden
+                relatieLand[neighborID] = n;
+            }
+        }
     });
-
-    var f = [];
+    
+    // 2. Verberg alle nodes
     sigInst.iterNodes(function (a) {
         a.hidden = !0;
         a.attr.lineWidth = !1;
         a.attr.color = a.color
     });
-
-    if (groupByDirection) {
-        for (e in outgoing) {
-            if (e in incoming) {
-                mutual[e] = outgoing[e];
-                delete incoming[e];
-                delete outgoing[e];
-            }
-        }
-    }
-
-    var createList = function (c) {
-        var f = [];
-        var e = [], g;
+    
+    // 3. De createList functie (lokale definitie behouden)
+    var createList=function(c) {
+        var f_html = [];
+        var e = [],
+            g;
         for (g in c) {
             var d = sigInst._core.graph.nodesIndex[g];
-            d.hidden = !1;
+            d.hidden = !1; // Maak de buur-nodes zichtbaar
             d.attr.lineWidth = !1;
             d.attr.color = c[g].colour;
             a != g && e.push({
                 id: g,
                 name: d.label,
-                group: (c[g].name) ? c[g].name : "",
+                group: (c[g].name)? c[g].name:"",
                 colour: c[g].colour
             })
         }
@@ -531,61 +551,88 @@ function nodeActive(a) {
                 f = b.name.toLowerCase();
             return c != d ? c < d ? -1 : c > d ? 1 : 0 : e < f ? -1 : e > f ? 1 : 0
         });
-        d = "";
         for (g in e) {
             c = e[g];
-            f.push('<li class="membership"><a href="#' + c.name + '" onmouseover="sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex[\'' + c.id + '\'])\" onclick=\"nodeActive(\'' + c.id + '\')" onmouseout="sigInst.refresh()">' + c.name + "</a></li>");
+            f_html.push('<li class="membership"><a href="#' + c.name + '" onmouseover="sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex[\'' + c.id + '\'])\" onclick=\"nodeActive(\'' + c.id + '\')" onmouseout="sigInst.refresh()">' + c.name + "</a></li>");
         }
-        return f;
+        return f_html;
     }
-
-    var f = [];
-
-    if (groupByDirection) {
-        size = Object.size(mutual);
-        f.push("<h2>Mututal (" + size + ")</h2>");
-        (size > 0) ? f = f.concat(createList(mutual)) : f.push("No mutual links<br>");
-        size = Object.size(incoming);
-        f.push("<h2>Incoming (" + size + ")</h2>");
-        (size > 0) ? f = f.concat(createList(incoming)) : f.push("No incoming links<br>");
-        size = Object.size(outgoing);
-        f.push("<h2>Outgoing (" + size + ")</h2>");
-        (size > 0) ? f = f.concat(createList(outgoing)) : f.push("No outgoing links<br>");
+    
+    // 4. Genereer de HTML voor het verbindingspaneel met de groeperingen
+    var f_list = [];
+    
+    // Ivm Geboorteplaats
+    var sizeGeboorte = Object.size(relatieGeboorte);
+    f_list.push("<h2>Geboorteplaats (" + sizeGeboorte + ")</h2>");
+    if (sizeGeboorte > 0) {
+        f_list = f_list.concat(createList(relatieGeboorte));
     } else {
-        f = f.concat(createList(sigInst.neighbors));
+        f_list.push("<li class=\"no-membership\">Geen verbindingen ivm geboorteplaats.</li>");
+    }
+    
+    // Ivm Sterfteplaats
+    var sizeSterfte = Object.size(relatieSterfte);
+    f_list.push("<h2>Plaats van overlijden (" + sizeSterfte + ")</h2>");
+    if (sizeSterfte > 0) {
+        f_list = f_list.concat(createList(relatieSterfte));
+    } else {
+        f_list.push("<li class=\"no-membership\">Geen verbindingen ivm plaats van overlijden.</li>");
+    }
+    
+    // Ivm Werklocatie
+    var sizeWerk = Object.size(relatieWerk);
+    f_list.push("<h2>Werkplaatsen (" + sizeWerk + ")</h2>");
+    if (sizeWerk > 0) {
+        f_list = f_list.concat(createList(relatieWerk));
+    } else {
+        f_list.push("<li class=\"no-membership\">Geen verbindingen ivm werkplaatsen.</li>");
+    }
+    
+    // Ivm Woonplaats
+    var sizeWoon = Object.size(relatieWoon);
+    f_list.push("<h2>Woonplaatsen (" + sizeWoon + ")</h2>");
+    if (sizeWoon > 0) {
+        f_list = f_list.concat(createList(relatieWoon));
+    } else {
+        f_list.push("<li class=\"no-membership\">Geen verbindingen ivm woonplaatsen.</li>");
     }
 
+    // NIEUW: Ivm Ligt in Land
+    var sizeLand = Object.size(relatieLand);
+    f_list.push("<h2>Ligt in Land (" + sizeLand + ")</h2>");
+    if (sizeLand > 0) {
+        f_list = f_list.concat(createList(relatieLand));
+    } else {
+        f_list.push("<li class=\"no-membership\">Geen verbindingen ivm Land.</li>");
+    }
+
+    // 5. Markeer de actieve node en teken de grafiek
     b.hidden = !1;
     b.attr.color = b.color;
     b.attr.lineWidth = 6;
     b.attr.strokeStyle = "#000000";
     sigInst.draw(2, 2, 2, 2);
-
-    $GP.info_link.find("ul").html(f.join(""));
-    $GP.info_link.find("li").each(function () {
-        var a = $(this),
-            b = a.attr("rel");
-    });
-
-    // ---------------------------------------------------------
-    // AANGEPAST GEDEELTE VOOR GUIDO GEZELLE VISUALISATIE
-    // ---------------------------------------------------------
-    f = b.attr;
-    if (f.attributes) {
-        e = [];
-
+    
+    // Plaats de nieuwe gegroepeerde lijst in het paneel
+    $GP.info_link.find("ul").html(f_list.join(""));
+    
+    // 6. Attribuut Weergave Logica (onveranderd)
+    var f_attributes = b.attr; 
+    var e = []; 
+    
+    if (f_attributes.attributes) {
+        var image_attribute = config.informationPanel.imageAttribute || false;
+        
+        // --- DATA ATTRIBUTEN ---
         // 1. IMAGE (Afbeelding tonen)
-        // In jouw data.json heet dit veld 'image'
-        if (f.attributes['image']) {
-            e.push('<div style="margin-bottom:15px;"><img src="' + f.attributes['image'] + '" style="max-width:100%; border-radius:5px;" alt="' + b.label + '" /></div>');
+        if (f_attributes.attributes['image']) {
+            e.push('<div style="margin-bottom:15px;"><img src="' + f_attributes.attributes['image'] + '" style="max-width:100%; border-radius:5px;" alt="' + b.label + '" /></div>');
         }
 
         // 2. WIKIDATA LINK
-        // Omdat de "id" in jouw data.json de Q-code is (bv. Q1981740), bouwen we hiermee de link.
         e.push('<div style="margin-bottom:8px;"><strong>Wikidata:</strong> <a href="https://www.wikidata.org/wiki/' + b.id + '" target="_blank" style="color:#0078ff; text-decoration:none;">Bekijk op Wikidata (' + b.id + ')</a></div>');
 
         // 3. SPECIFIEKE VELDEN TONEN
-        // Hier mappen we de naam uit jouw data.json (links) naar de tekst die je wilt tonen (rechts).
         var fieldMapping = {
             "type": "Type",
             "bijhorendlandlabel": "Bijhorend land",
@@ -596,26 +643,22 @@ function nodeActive(a) {
         };
 
         for (var key in fieldMapping) {
-            // Pak de waarde uit de attributen
-            var val = f.attributes[key];
-
-            // Check of het attribuut bestaat én niet leeg is
+            var val = f_attributes.attributes[key];
             if (val && val !== "" && val !== "null") {
-                // Voeg toe aan de lijst met de mooie naam uit de mapping
                 e.push('<span><strong>' + fieldMapping[key] + ':</strong> ' + val + '</span><br/>');
             }
         }
-
-       $GP.info_name.html("<div><span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
+        
+        // --- TITEL WEERGAVE ---
+        $GP.info_name.html("<div><span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
+        
         $GP.info_data.html(e.join(""));
     }
-    // ---------------------------------------------------------
-    // EINDE AANGEPAST GEDEELTE
-    // ---------------------------------------------------------
-
+    
+    // 7. Het informatiepaneel tonen
     $GP.info_data.show();
     $GP.info_p.html("Connections:");
-    $GP.info.animate({ width: 'show' }, 350);
+    $GP.info.animate({width:'show'},350);
     $GP.info_donnees.hide();
     $GP.info_donnees.show();
     sigInst.active = a;
