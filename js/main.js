@@ -535,58 +535,45 @@ function nodeActive(a) {
     });
 
     // ---------------------------------------------------------
-    // AANGEPAST GEDEELTE VOOR GUIDO GEZELLE VISUALISATIE START
+    // AANGEPAST GEDEELTE VOOR GUIDO GEZELLE VISUALISATIE
     // ---------------------------------------------------------
     f = b.attr;
     if (f.attributes) {
         e = [];
-        
-        // De lijst met specifieke velden die je wilt tonen als tekst
-        // Zorg dat deze exact overeenkomen met je Gephi kolomnamen (hoofdlettergevoeligheid wordt hieronder opgevangen)
-        var textFieldsToShow = [
-            "type",
-            "bijhorend land label",
-            "geboorteplaats",
-            "geboorteland",
-            "plaats van overlijden",
-            "land van overlijden"
-        ];
 
-        for (var attr in f.attributes) {
-            var val = f.attributes[attr];
-            var attrLower = attr.toLowerCase(); // Alles naar kleine letters voor makkelijke vergelijking
-
-            // Check of de waarde leeg is, zo ja: overslaan
-            if (!val || val === "" || val === "null") continue;
-
-            // 1. Wikidata Links (Zoekt naar 'wikidata' in de kolomnaam)
-            if (attrLower.indexOf("wikidata") !== -1) {
-                // Maak er een klikbare link van
-                e.push('<span><strong>' + attr + ':</strong> <a href="' + val + '" target="_blank" style="color:#0078ff; text-decoration:underline;">Bekijk op Wikidata</a></span><br/>');
-            }
-            // 2. Images (Zoekt naar 'image', 'afbeelding' of 'foto' in de kolomnaam)
-            else if (attrLower.indexOf("image") !== -1 || attrLower.indexOf("afbeelding") !== -1 || attrLower.indexOf("foto") !== -1) {
-                // Toon de afbeelding
-                e.push('<div style="margin-top:10px; margin-bottom:10px;"><img src="' + val + '" style="max-width:100%; border-radius:5px; border:1px solid #ddd;" alt="Afbeelding" /></div>');
-            }
-            // 3. Specifieke tekstvelden (Personen & Plaatsen logica)
-            // We checken of de huidige attribuutnaam voorkomt in jouw lijstje 'textFieldsToShow'
-            else if (textFieldsToShow.indexOf(attrLower) !== -1 || textFieldsToShow.indexOf(attr) !== -1) {
-                e.push('<span><strong>' + attr + ':</strong> ' + val + '</span><br/>');
-            }
-            
-            // 4. Wil je ALLE overige velden ook zien? Haal dan de commentaarstrepen hieronder weg:
-            /*
-            else {
-                 e.push('<span><strong>' + attr + ':</strong> ' + val + '</span><br/>');
-            }
-            */
+        // 1. IMAGE (Afbeelding tonen)
+        // In jouw data.json heet dit veld 'image'
+        if (f.attributes['image']) {
+            e.push('<div style="margin-bottom:15px;"><img src="' + f.attributes['image'] + '" style="max-width:100%; border-radius:5px;" alt="' + b.label + '" /></div>');
         }
 
-        // Zet de naam van de node bovenaan
-        $GP.info_name.html("<div><span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
+        // 2. WIKIDATA LINK
+        // Omdat de "id" in jouw data.json de Q-code is (bv. Q1981740), bouwen we hiermee de link.
+        e.push('<div style="margin-bottom:8px;"><strong>Wikidata:</strong> <a href="https://www.wikidata.org/wiki/' + b.id + '" target="_blank" style="color:#0078ff; text-decoration:none;">Bekijk op Wikidata (' + b.id + ')</a></div>');
 
-        // Plaats de gegenereerde HTML in het info paneel
+        // 3. SPECIFIEKE VELDEN TONEN
+        // Hier mappen we de naam uit jouw data.json (links) naar de tekst die je wilt tonen (rechts).
+        var fieldMapping = {
+            "type": "Type",
+            "bijhorendlandlabel": "Bijhorend land",
+            "birthplacelabel": "Geboorteplaats",
+            "birthcountrylabel": "Geboorteland",
+            "deathplacelabel": "Plaats van overlijden",
+            "deathcountrylabel": "Land van overlijden"
+        };
+
+        for (var key in fieldMapping) {
+            // Pak de waarde uit de attributen
+            var val = f.attributes[key];
+
+            // Check of het attribuut bestaat én niet leeg is
+            if (val && val !== "" && val !== "null") {
+                // Voeg toe aan de lijst met de mooie naam uit de mapping
+                e.push('<span><strong>' + fieldMapping[key] + ':</strong> ' + val + '</span><br/>');
+            }
+        }
+
+        $GP.info_name.html("<div><span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
         $GP.info_data.html(e.join(""));
     }
     // ---------------------------------------------------------
