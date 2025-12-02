@@ -275,7 +275,7 @@ function configSigmaElements(config) {
     }
     $GP.bg = $(sigInst._core.domElements.bg);
     $GP.bg2 = $(sigInst._core.domElements.bg2);
-    // NIEUWE CODE
+    // OPGELOST: Group Selector code
     var a = [], b;
     
     // We definiëren hier een vertaling voor je datatypen
@@ -295,9 +295,10 @@ function configSigmaElements(config) {
         var groupLabel = "Onbekend"; // Standaard label
 
         // Probeer het type op te halen uit de data
+        // Omdat je nodes een 'type' attribuut hebben (Person, Place, Country)
         if (firstNode && firstNode.attr && firstNode.attr.attributes && firstNode.attr.attributes.type) {
             var rawType = firstNode.attr.attributes.type;
-            // Kijk of we een Nederlandse vertaling hebben, anders tonen we het Engelse type
+            // Kijk of we een Nederlandse vertaling hebben
             if (typeTranslations[rawType]) {
                 groupLabel = typeTranslations[rawType];
             } else {
@@ -305,10 +306,10 @@ function configSigmaElements(config) {
             }
         }
 
-        // Maak de HTML voor de selector
+        // Maak de HTML voor de selector. De href MOET alleen de kleurcode zijn.
         a.push('<div style="line-height:12px; margin-bottom:5px;"><a href="#' + b + '" style="text-decoration:none; color:#333;">' + 
                '<div style="width:12px; height:12px; margin-right:5px; border:1px solid #999; background:' + b + '; display:inline-block; vertical-align:middle;"></div>' + 
-               '<span style="vertical-align:middle;">' + groupLabel + ' (' + clusterNodes.length + ')</span></a></div>');
+               '<span style="vertical-align:middle;">' + groupLabel + ' (' + clusterNodes.length + ' leden)</span></a></div>');
     }
     //a.sort();
     $GP.cluster.content(a.join(""));
@@ -605,7 +606,7 @@ function nodeActive(a) {
             }
         }
 
-       $GP.info_name.html("<div><img src=" + f.attributes[image_attribute] + " style=\"vertical-align:middle; max-height:60px; max-width:60px; margin-right: 10px;\" /> <span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
+       $GP.info_name.html("<div><span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
         $GP.info_data.html(e.join(""));
     }
     // ---------------------------------------------------------
