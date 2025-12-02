@@ -275,9 +275,41 @@ function configSigmaElements(config) {
     }
     $GP.bg = $(sigInst._core.domElements.bg);
     $GP.bg2 = $(sigInst._core.domElements.bg2);
-    var a = [],
-        b,x=1;
-		for (b in sigInst.clusters) a.push('<div style="line-height:12px"><a href="#' + b + '"><div style="width:40px;height:12px;border:1px solid #fff;background:' + b + ';display:inline-block"></div> Group ' + (x++) + ' (' + sigInst.clusters[b].length + ' members)</a></div>');
+    // NIEUWE CODE
+    var a = [], b;
+    
+    // We definiëren hier een vertaling voor je datatypen
+    var typeTranslations = {
+        "Person": "Personen",
+        "Place": "Plaatsen",
+        "Country": "Landen"
+    };
+
+    for (b in sigInst.clusters) {
+        // b is de kleurcode (bijv. rgb(249,119,67))
+        // We pakken de eerste node uit deze kleurgroep om te kijken wat voor type het is
+        var clusterNodes = sigInst.clusters[b];
+        var firstNodeId = clusterNodes[0];
+        var firstNode = sigInst._core.graph.nodesIndex[firstNodeId];
+        
+        var groupLabel = "Onbekend"; // Standaard label
+
+        // Probeer het type op te halen uit de data
+        if (firstNode && firstNode.attr && firstNode.attr.attributes && firstNode.attr.attributes.type) {
+            var rawType = firstNode.attr.attributes.type;
+            // Kijk of we een Nederlandse vertaling hebben, anders tonen we het Engelse type
+            if (typeTranslations[rawType]) {
+                groupLabel = typeTranslations[rawType];
+            } else {
+                groupLabel = rawType;
+            }
+        }
+
+        // Maak de HTML voor de selector
+        a.push('<div style="line-height:12px; margin-bottom:5px;"><a href="#' + b + '" style="text-decoration:none; color:#333;">' + 
+               '<div style="width:12px; height:12px; margin-right:5px; border:1px solid #999; background:' + b + '; display:inline-block; vertical-align:middle;"></div>' + 
+               '<span style="vertical-align:middle;">' + groupLabel + ' (' + clusterNodes.length + ')</span></a></div>');
+    }
     //a.sort();
     $GP.cluster.content(a.join(""));
     b = {
