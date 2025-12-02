@@ -435,111 +435,93 @@ function nodeNormal() {
 }
 
 function nodeActive(a) {
+    var groupByDirection = false;
+    if (config.informationPanel.groupByEdgeDirection && config.informationPanel.groupByEdgeDirection == true) groupByDirection = true;
 
-	var groupByDirection=false;
-	if (config.informationPanel.groupByEdgeDirection && config.informationPanel.groupByEdgeDirection==true)	groupByDirection=true;
-	
     sigInst.neighbors = {};
     sigInst.detail = !0;
     var b = sigInst._core.graph.nodesIndex[a];
     showGroups(!1);
-	var outgoing={},incoming={},mutual={};//SAH
+    var outgoing = {}, incoming = {}, mutual = {};
+
     sigInst.iterEdges(function (b) {
         b.attr.lineWidth = !1;
         b.hidden = !0;
-        
-        n={
+
+        n = {
             name: b.label,
             colour: b.color
         };
-        
-   	   if (a==b.source) outgoing[b.target]=n;		//SAH
-	   else if (a==b.target) incoming[b.source]=n;		//SAH
-       if (a == b.source || a == b.target) sigInst.neighbors[a == b.target ? b.source : b.target] = n;
-       b.hidden = !1, b.attr.color = "rgba(0, 0, 0, 1)";
+
+        if (a == b.source) outgoing[b.target] = n;
+        else if (a == b.target) incoming[b.source] = n;
+        if (a == b.source || a == b.target) sigInst.neighbors[a == b.target ? b.source : b.target] = n;
+        b.hidden = !1, b.attr.color = "rgba(0, 0, 0, 1)";
     });
+
     var f = [];
     sigInst.iterNodes(function (a) {
         a.hidden = !0;
         a.attr.lineWidth = !1;
         a.attr.color = a.color
     });
-    
-    if (groupByDirection) {
-		//SAH - Compute intersection for mutual and remove these from incoming/outgoing
-		for (e in outgoing) {
-			//name=outgoing[e];
-			if (e in incoming) {
-				mutual[e]=outgoing[e];
-				delete incoming[e];
-				delete outgoing[e];
-			}
-		}
-    }
-    
-    var createList=function(c) {
-        var f = [];
-    	var e = [],
-      	 	 //c = sigInst.neighbors,
-       		 g;
-    for (g in c) {
-        var d = sigInst._core.graph.nodesIndex[g];
-        d.hidden = !1;
-        d.attr.lineWidth = !1;
-        d.attr.color = c[g].colour;
-        a != g && e.push({
-            id: g,
-            name: d.label,
-            group: (c[g].name)? c[g].name:"",
-            colour: c[g].colour
-        })
-    }
-    e.sort(function (a, b) {
-        var c = a.group.toLowerCase(),
-            d = b.group.toLowerCase(),
-            e = a.name.toLowerCase(),
-            f = b.name.toLowerCase();
-        return c != d ? c < d ? -1 : c > d ? 1 : 0 : e < f ? -1 : e > f ? 1 : 0
-    });
-    d = "";
-		for (g in e) {
-			c = e[g];
-			/*if (c.group != d) {
-				d = c.group;
-				f.push('<li class="cf" rel="' + c.color + '"><div class=""></div><div class="">' + d + "</div></li>");
-			}*/
-			f.push('<li class="membership"><a href="#' + c.name + '" onmouseover="sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex[\'' + c.id + '\'])\" onclick=\"nodeActive(\'' + c.id + '\')" onmouseout="sigInst.refresh()">' + c.name + "</a></li>");
-		}
-		return f;
-	}
-	
-	/*console.log("mutual:");
-	console.log(mutual);
-	console.log("incoming:");
-	console.log(incoming);
-	console.log("outgoing:");
-	console.log(outgoing);*/
-	
-	
-	var f=[];
-	
-	//console.log("neighbors:");
-	//console.log(sigInst.neighbors);
 
-	if (groupByDirection) {
-		size=Object.size(mutual);
-		f.push("<h2>Mututal (" + size + ")</h2>");
-		(size>0)? f=f.concat(createList(mutual)) : f.push("No mutual links<br>");
-		size=Object.size(incoming);
-		f.push("<h2>Incoming (" + size + ")</h2>");
-		(size>0)? f=f.concat(createList(incoming)) : f.push("No incoming links<br>");
-		size=Object.size(outgoing);
-		f.push("<h2>Outgoing (" + size + ")</h2>");
-		(size>0)? f=f.concat(createList(outgoing)) : f.push("No outgoing links<br>");
-	} else {
-		f=f.concat(createList(sigInst.neighbors));
-	}
-	//b is object of active node -- SAH
+    if (groupByDirection) {
+        for (e in outgoing) {
+            if (e in incoming) {
+                mutual[e] = outgoing[e];
+                delete incoming[e];
+                delete outgoing[e];
+            }
+        }
+    }
+
+    var createList = function (c) {
+        var f = [];
+        var e = [], g;
+        for (g in c) {
+            var d = sigInst._core.graph.nodesIndex[g];
+            d.hidden = !1;
+            d.attr.lineWidth = !1;
+            d.attr.color = c[g].colour;
+            a != g && e.push({
+                id: g,
+                name: d.label,
+                group: (c[g].name) ? c[g].name : "",
+                colour: c[g].colour
+            })
+        }
+        e.sort(function (a, b) {
+            var c = a.group.toLowerCase(),
+                d = b.group.toLowerCase(),
+                e = a.name.toLowerCase(),
+                f = b.name.toLowerCase();
+            return c != d ? c < d ? -1 : c > d ? 1 : 0 : e < f ? -1 : e > f ? 1 : 0
+        });
+        d = "";
+        for (g in e) {
+            c = e[g];
+            f.push('<li class="membership"><a href="#' + c.name + '" onmouseover="sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex[\'' + c.id + '\'])\" onclick=\"nodeActive(\'' + c.id + '\')" onmouseout="sigInst.refresh()">' + c.name + "</a></li>");
+        }
+        return f;
+    }
+
+    var f = [];
+
+    if (groupByDirection) {
+        size = Object.size(mutual);
+        f.push("<h2>Mututal (" + size + ")</h2>");
+        (size > 0) ? f = f.concat(createList(mutual)) : f.push("No mutual links<br>");
+        size = Object.size(incoming);
+        f.push("<h2>Incoming (" + size + ")</h2>");
+        (size > 0) ? f = f.concat(createList(incoming)) : f.push("No incoming links<br>");
+        size = Object.size(outgoing);
+        f.push("<h2>Outgoing (" + size + ")</h2>");
+        (size > 0) ? f = f.concat(createList(outgoing)) : f.push("No outgoing links<br>");
+    } else {
+        f = f.concat(createList(sigInst.neighbors));
+    }
+
     b.hidden = !1;
     b.attr.color = b.color;
     b.attr.lineWidth = 6;
@@ -551,39 +533,71 @@ function nodeActive(a) {
         var a = $(this),
             b = a.attr("rel");
     });
+
+    // ---------------------------------------------------------
+    // AANGEPAST GEDEELTE VOOR GUIDO GEZELLE VISUALISATIE START
+    // ---------------------------------------------------------
     f = b.attr;
     if (f.attributes) {
-  		var image_attribute = false;
-  		if (config.informationPanel.imageAttribute) {
-  			image_attribute=config.informationPanel.imageAttribute;
-  		}
         e = [];
-        temp_array = [];
-        g = 0;
+        
+        // De lijst met specifieke velden die je wilt tonen als tekst
+        // Zorg dat deze exact overeenkomen met je Gephi kolomnamen (hoofdlettergevoeligheid wordt hieronder opgevangen)
+        var textFieldsToShow = [
+            "type",
+            "bijhorend land label",
+            "geboorteplaats",
+            "geboorteland",
+            "plaats van overlijden",
+            "land van overlijden"
+        ];
+
         for (var attr in f.attributes) {
-            var d = f.attributes[attr],
-                h = "";
-			if (attr!=image_attribute) {
-                h = '<span><strong>' + attr + ':</strong> ' + d + '</span><br/>'
-			}
-            //temp_array.push(f.attributes[g].attr);
-            e.push(h)
+            var val = f.attributes[attr];
+            var attrLower = attr.toLowerCase(); // Alles naar kleine letters voor makkelijke vergelijking
+
+            // Check of de waarde leeg is, zo ja: overslaan
+            if (!val || val === "" || val === "null") continue;
+
+            // 1. Wikidata Links (Zoekt naar 'wikidata' in de kolomnaam)
+            if (attrLower.indexOf("wikidata") !== -1) {
+                // Maak er een klikbare link van
+                e.push('<span><strong>' + attr + ':</strong> <a href="' + val + '" target="_blank" style="color:#0078ff; text-decoration:underline;">Bekijk op Wikidata</a></span><br/>');
+            }
+            // 2. Images (Zoekt naar 'image', 'afbeelding' of 'foto' in de kolomnaam)
+            else if (attrLower.indexOf("image") !== -1 || attrLower.indexOf("afbeelding") !== -1 || attrLower.indexOf("foto") !== -1) {
+                // Toon de afbeelding
+                e.push('<div style="margin-top:10px; margin-bottom:10px;"><img src="' + val + '" style="max-width:100%; border-radius:5px; border:1px solid #ddd;" alt="Afbeelding" /></div>');
+            }
+            // 3. Specifieke tekstvelden (Personen & Plaatsen logica)
+            // We checken of de huidige attribuutnaam voorkomt in jouw lijstje 'textFieldsToShow'
+            else if (textFieldsToShow.indexOf(attrLower) !== -1 || textFieldsToShow.indexOf(attr) !== -1) {
+                e.push('<span><strong>' + attr + ':</strong> ' + val + '</span><br/>');
+            }
+            
+            // 4. Wil je ALLE overige velden ook zien? Haal dan de commentaarstrepen hieronder weg:
+            /*
+            else {
+                 e.push('<span><strong>' + attr + ':</strong> ' + val + '</span><br/>');
+            }
+            */
         }
 
-        if (image_attribute) {
-        	//image_index = jQuery.inArray(image_attribute, temp_array);
-        	$GP.info_name.html("<div><img src=" + f.attributes[image_attribute] + " style=\"vertical-align:middle\" /> <span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
-        } else {
-        	$GP.info_name.html("<div><span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
-        }
-        // Image field for attribute pane
-        $GP.info_data.html(e.join("<br/>"))
+        // Zet de naam van de node bovenaan
+        $GP.info_name.html("<div><span onmouseover=\"sigInst._core.plotter.drawHoverNode(sigInst._core.graph.nodesIndex['" + b.id + '\'])" onmouseout="sigInst.refresh()">' + b.label + "</span></div>");
+
+        // Plaats de gegenereerde HTML in het info paneel
+        $GP.info_data.html(e.join(""));
     }
+    // ---------------------------------------------------------
+    // EINDE AANGEPAST GEDEELTE
+    // ---------------------------------------------------------
+
     $GP.info_data.show();
     $GP.info_p.html("Connections:");
-    $GP.info.animate({width:'show'},350);
-	$GP.info_donnees.hide();
-	$GP.info_donnees.show();
+    $GP.info.animate({ width: 'show' }, 350);
+    $GP.info_donnees.hide();
+    $GP.info_donnees.show();
     sigInst.active = a;
     window.location.hash = b.label;
 }
